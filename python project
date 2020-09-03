@@ -1,0 +1,718 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Untitled4.ipynb",
+      "provenance": [],
+      "authorship_tag": "ABX9TyOeCtT0m0XRZ7kMAo3Z/Iyd",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/SmartPracticeschool/llSPS-INT-3742-Chronic-kidney-disease-analysis/blob/master/python%20project\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Q8mU8VEBxx-t",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "# description: this program classifies patients as having chronic kidney disease (ckd) or not\n",
+        "#               using Artificial Neural Networks (ANN)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "1w0xssMOx2PF",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#import libraries\n",
+        "import glob\n",
+        "from keras.models import Sequential, load_model\n",
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "from keras.layers import Dense\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.preprocessing import LabelEncoder, MinMaxScaler\n",
+        "import matplotlib.pyplot as plt\n",
+        "import keras as k"
+      ],
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "J5qk_3HZyEsM",
+        "colab_type": "code",
+        "colab": {
+          "resources": {
+            "http://localhost:8080/nbextensions/google.colab/files.js": {
+              "data": "Ly8gQ29weXJpZ2h0IDIwMTcgR29vZ2xlIExMQwovLwovLyBMaWNlbnNlZCB1bmRlciB0aGUgQXBhY2hlIExpY2Vuc2UsIFZlcnNpb24gMi4wICh0aGUgIkxpY2Vuc2UiKTsKLy8geW91IG1heSBub3QgdXNlIHRoaXMgZmlsZSBleGNlcHQgaW4gY29tcGxpYW5jZSB3aXRoIHRoZSBMaWNlbnNlLgovLyBZb3UgbWF5IG9idGFpbiBhIGNvcHkgb2YgdGhlIExpY2Vuc2UgYXQKLy8KLy8gICAgICBodHRwOi8vd3d3LmFwYWNoZS5vcmcvbGljZW5zZXMvTElDRU5TRS0yLjAKLy8KLy8gVW5sZXNzIHJlcXVpcmVkIGJ5IGFwcGxpY2FibGUgbGF3IG9yIGFncmVlZCB0byBpbiB3cml0aW5nLCBzb2Z0d2FyZQovLyBkaXN0cmlidXRlZCB1bmRlciB0aGUgTGljZW5zZSBpcyBkaXN0cmlidXRlZCBvbiBhbiAiQVMgSVMiIEJBU0lTLAovLyBXSVRIT1VUIFdBUlJBTlRJRVMgT1IgQ09ORElUSU9OUyBPRiBBTlkgS0lORCwgZWl0aGVyIGV4cHJlc3Mgb3IgaW1wbGllZC4KLy8gU2VlIHRoZSBMaWNlbnNlIGZvciB0aGUgc3BlY2lmaWMgbGFuZ3VhZ2UgZ292ZXJuaW5nIHBlcm1pc3Npb25zIGFuZAovLyBsaW1pdGF0aW9ucyB1bmRlciB0aGUgTGljZW5zZS4KCi8qKgogKiBAZmlsZW92ZXJ2aWV3IEhlbHBlcnMgZm9yIGdvb2dsZS5jb2xhYiBQeXRob24gbW9kdWxlLgogKi8KKGZ1bmN0aW9uKHNjb3BlKSB7CmZ1bmN0aW9uIHNwYW4odGV4dCwgc3R5bGVBdHRyaWJ1dGVzID0ge30pIHsKICBjb25zdCBlbGVtZW50ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc3BhbicpOwogIGVsZW1lbnQudGV4dENvbnRlbnQgPSB0ZXh0OwogIGZvciAoY29uc3Qga2V5IG9mIE9iamVjdC5rZXlzKHN0eWxlQXR0cmlidXRlcykpIHsKICAgIGVsZW1lbnQuc3R5bGVba2V5XSA9IHN0eWxlQXR0cmlidXRlc1trZXldOwogIH0KICByZXR1cm4gZWxlbWVudDsKfQoKLy8gTWF4IG51bWJlciBvZiBieXRlcyB3aGljaCB3aWxsIGJlIHVwbG9hZGVkIGF0IGEgdGltZS4KY29uc3QgTUFYX1BBWUxPQURfU0laRSA9IDEwMCAqIDEwMjQ7CgpmdW5jdGlvbiBfdXBsb2FkRmlsZXMoaW5wdXRJZCwgb3V0cHV0SWQpIHsKICBjb25zdCBzdGVwcyA9IHVwbG9hZEZpbGVzU3RlcChpbnB1dElkLCBvdXRwdXRJZCk7CiAgY29uc3Qgb3V0cHV0RWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKG91dHB1dElkKTsKICAvLyBDYWNoZSBzdGVwcyBvbiB0aGUgb3V0cHV0RWxlbWVudCB0byBtYWtlIGl0IGF2YWlsYWJsZSBmb3IgdGhlIG5leHQgY2FsbAogIC8vIHRvIHVwbG9hZEZpbGVzQ29udGludWUgZnJvbSBQeXRob24uCiAgb3V0cHV0RWxlbWVudC5zdGVwcyA9IHN0ZXBzOwoKICByZXR1cm4gX3VwbG9hZEZpbGVzQ29udGludWUob3V0cHV0SWQpOwp9CgovLyBUaGlzIGlzIHJvdWdobHkgYW4gYXN5bmMgZ2VuZXJhdG9yIChub3Qgc3VwcG9ydGVkIGluIHRoZSBicm93c2VyIHlldCksCi8vIHdoZXJlIHRoZXJlIGFyZSBtdWx0aXBsZSBhc3luY2hyb25vdXMgc3RlcHMgYW5kIHRoZSBQeXRob24gc2lkZSBpcyBnb2luZwovLyB0byBwb2xsIGZvciBjb21wbGV0aW9uIG9mIGVhY2ggc3RlcC4KLy8gVGhpcyB1c2VzIGEgUHJvbWlzZSB0byBibG9jayB0aGUgcHl0aG9uIHNpZGUgb24gY29tcGxldGlvbiBvZiBlYWNoIHN0ZXAsCi8vIHRoZW4gcGFzc2VzIHRoZSByZXN1bHQgb2YgdGhlIHByZXZpb3VzIHN0ZXAgYXMgdGhlIGlucHV0IHRvIHRoZSBuZXh0IHN0ZXAuCmZ1bmN0aW9uIF91cGxvYWRGaWxlc0NvbnRpbnVlKG91dHB1dElkKSB7CiAgY29uc3Qgb3V0cHV0RWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKG91dHB1dElkKTsKICBjb25zdCBzdGVwcyA9IG91dHB1dEVsZW1lbnQuc3RlcHM7CgogIGNvbnN0IG5leHQgPSBzdGVwcy5uZXh0KG91dHB1dEVsZW1lbnQubGFzdFByb21pc2VWYWx1ZSk7CiAgcmV0dXJuIFByb21pc2UucmVzb2x2ZShuZXh0LnZhbHVlLnByb21pc2UpLnRoZW4oKHZhbHVlKSA9PiB7CiAgICAvLyBDYWNoZSB0aGUgbGFzdCBwcm9taXNlIHZhbHVlIHRvIG1ha2UgaXQgYXZhaWxhYmxlIHRvIHRoZSBuZXh0CiAgICAvLyBzdGVwIG9mIHRoZSBnZW5lcmF0b3IuCiAgICBvdXRwdXRFbGVtZW50Lmxhc3RQcm9taXNlVmFsdWUgPSB2YWx1ZTsKICAgIHJldHVybiBuZXh0LnZhbHVlLnJlc3BvbnNlOwogIH0pOwp9CgovKioKICogR2VuZXJhdG9yIGZ1bmN0aW9uIHdoaWNoIGlzIGNhbGxlZCBiZXR3ZWVuIGVhY2ggYXN5bmMgc3RlcCBvZiB0aGUgdXBsb2FkCiAqIHByb2Nlc3MuCiAqIEBwYXJhbSB7c3RyaW5nfSBpbnB1dElkIEVsZW1lbnQgSUQgb2YgdGhlIGlucHV0IGZpbGUgcGlja2VyIGVsZW1lbnQuCiAqIEBwYXJhbSB7c3RyaW5nfSBvdXRwdXRJZCBFbGVtZW50IElEIG9mIHRoZSBvdXRwdXQgZGlzcGxheS4KICogQHJldHVybiB7IUl0ZXJhYmxlPCFPYmplY3Q+fSBJdGVyYWJsZSBvZiBuZXh0IHN0ZXBzLgogKi8KZnVuY3Rpb24qIHVwbG9hZEZpbGVzU3RlcChpbnB1dElkLCBvdXRwdXRJZCkgewogIGNvbnN0IGlucHV0RWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKGlucHV0SWQpOwogIGlucHV0RWxlbWVudC5kaXNhYmxlZCA9IGZhbHNlOwoKICBjb25zdCBvdXRwdXRFbGVtZW50ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQob3V0cHV0SWQpOwogIG91dHB1dEVsZW1lbnQuaW5uZXJIVE1MID0gJyc7CgogIGNvbnN0IHBpY2tlZFByb21pc2UgPSBuZXcgUHJvbWlzZSgocmVzb2x2ZSkgPT4gewogICAgaW5wdXRFbGVtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ2NoYW5nZScsIChlKSA9PiB7CiAgICAgIHJlc29sdmUoZS50YXJnZXQuZmlsZXMpOwogICAgfSk7CiAgfSk7CgogIGNvbnN0IGNhbmNlbCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2J1dHRvbicpOwogIGlucHV0RWxlbWVudC5wYXJlbnRFbGVtZW50LmFwcGVuZENoaWxkKGNhbmNlbCk7CiAgY2FuY2VsLnRleHRDb250ZW50ID0gJ0NhbmNlbCB1cGxvYWQnOwogIGNvbnN0IGNhbmNlbFByb21pc2UgPSBuZXcgUHJvbWlzZSgocmVzb2x2ZSkgPT4gewogICAgY2FuY2VsLm9uY2xpY2sgPSAoKSA9PiB7CiAgICAgIHJlc29sdmUobnVsbCk7CiAgICB9OwogIH0pOwoKICAvLyBXYWl0IGZvciB0aGUgdXNlciB0byBwaWNrIHRoZSBmaWxlcy4KICBjb25zdCBmaWxlcyA9IHlpZWxkIHsKICAgIHByb21pc2U6IFByb21pc2UucmFjZShbcGlja2VkUHJvbWlzZSwgY2FuY2VsUHJvbWlzZV0pLAogICAgcmVzcG9uc2U6IHsKICAgICAgYWN0aW9uOiAnc3RhcnRpbmcnLAogICAgfQogIH07CgogIGNhbmNlbC5yZW1vdmUoKTsKCiAgLy8gRGlzYWJsZSB0aGUgaW5wdXQgZWxlbWVudCBzaW5jZSBmdXJ0aGVyIHBpY2tzIGFyZSBub3QgYWxsb3dlZC4KICBpbnB1dEVsZW1lbnQuZGlzYWJsZWQgPSB0cnVlOwoKICBpZiAoIWZpbGVzKSB7CiAgICByZXR1cm4gewogICAgICByZXNwb25zZTogewogICAgICAgIGFjdGlvbjogJ2NvbXBsZXRlJywKICAgICAgfQogICAgfTsKICB9CgogIGZvciAoY29uc3QgZmlsZSBvZiBmaWxlcykgewogICAgY29uc3QgbGkgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdsaScpOwogICAgbGkuYXBwZW5kKHNwYW4oZmlsZS5uYW1lLCB7Zm9udFdlaWdodDogJ2JvbGQnfSkpOwogICAgbGkuYXBwZW5kKHNwYW4oCiAgICAgICAgYCgke2ZpbGUudHlwZSB8fCAnbi9hJ30pIC0gJHtmaWxlLnNpemV9IGJ5dGVzLCBgICsKICAgICAgICBgbGFzdCBtb2RpZmllZDogJHsKICAgICAgICAgICAgZmlsZS5sYXN0TW9kaWZpZWREYXRlID8gZmlsZS5sYXN0TW9kaWZpZWREYXRlLnRvTG9jYWxlRGF0ZVN0cmluZygpIDoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgJ24vYSd9IC0gYCkpOwogICAgY29uc3QgcGVyY2VudCA9IHNwYW4oJzAlIGRvbmUnKTsKICAgIGxpLmFwcGVuZENoaWxkKHBlcmNlbnQpOwoKICAgIG91dHB1dEVsZW1lbnQuYXBwZW5kQ2hpbGQobGkpOwoKICAgIGNvbnN0IGZpbGVEYXRhUHJvbWlzZSA9IG5ldyBQcm9taXNlKChyZXNvbHZlKSA9PiB7CiAgICAgIGNvbnN0IHJlYWRlciA9IG5ldyBGaWxlUmVhZGVyKCk7CiAgICAgIHJlYWRlci5vbmxvYWQgPSAoZSkgPT4gewogICAgICAgIHJlc29sdmUoZS50YXJnZXQucmVzdWx0KTsKICAgICAgfTsKICAgICAgcmVhZGVyLnJlYWRBc0FycmF5QnVmZmVyKGZpbGUpOwogICAgfSk7CiAgICAvLyBXYWl0IGZvciB0aGUgZGF0YSB0byBiZSByZWFkeS4KICAgIGxldCBmaWxlRGF0YSA9IHlpZWxkIHsKICAgICAgcHJvbWlzZTogZmlsZURhdGFQcm9taXNlLAogICAgICByZXNwb25zZTogewogICAgICAgIGFjdGlvbjogJ2NvbnRpbnVlJywKICAgICAgfQogICAgfTsKCiAgICAvLyBVc2UgYSBjaHVua2VkIHNlbmRpbmcgdG8gYXZvaWQgbWVzc2FnZSBzaXplIGxpbWl0cy4gU2VlIGIvNjIxMTU2NjAuCiAgICBsZXQgcG9zaXRpb24gPSAwOwogICAgd2hpbGUgKHBvc2l0aW9uIDwgZmlsZURhdGEuYnl0ZUxlbmd0aCkgewogICAgICBjb25zdCBsZW5ndGggPSBNYXRoLm1pbihmaWxlRGF0YS5ieXRlTGVuZ3RoIC0gcG9zaXRpb24sIE1BWF9QQVlMT0FEX1NJWkUpOwogICAgICBjb25zdCBjaHVuayA9IG5ldyBVaW50OEFycmF5KGZpbGVEYXRhLCBwb3NpdGlvbiwgbGVuZ3RoKTsKICAgICAgcG9zaXRpb24gKz0gbGVuZ3RoOwoKICAgICAgY29uc3QgYmFzZTY0ID0gYnRvYShTdHJpbmcuZnJvbUNoYXJDb2RlLmFwcGx5KG51bGwsIGNodW5rKSk7CiAgICAgIHlpZWxkIHsKICAgICAgICByZXNwb25zZTogewogICAgICAgICAgYWN0aW9uOiAnYXBwZW5kJywKICAgICAgICAgIGZpbGU6IGZpbGUubmFtZSwKICAgICAgICAgIGRhdGE6IGJhc2U2NCwKICAgICAgICB9LAogICAgICB9OwogICAgICBwZXJjZW50LnRleHRDb250ZW50ID0KICAgICAgICAgIGAke01hdGgucm91bmQoKHBvc2l0aW9uIC8gZmlsZURhdGEuYnl0ZUxlbmd0aCkgKiAxMDApfSUgZG9uZWA7CiAgICB9CiAgfQoKICAvLyBBbGwgZG9uZS4KICB5aWVsZCB7CiAgICByZXNwb25zZTogewogICAgICBhY3Rpb246ICdjb21wbGV0ZScsCiAgICB9CiAgfTsKfQoKc2NvcGUuZ29vZ2xlID0gc2NvcGUuZ29vZ2xlIHx8IHt9OwpzY29wZS5nb29nbGUuY29sYWIgPSBzY29wZS5nb29nbGUuY29sYWIgfHwge307CnNjb3BlLmdvb2dsZS5jb2xhYi5fZmlsZXMgPSB7CiAgX3VwbG9hZEZpbGVzLAogIF91cGxvYWRGaWxlc0NvbnRpbnVlLAp9Owp9KShzZWxmKTsK",
+              "ok": true,
+              "headers": [
+                [
+                  "content-type",
+                  "application/javascript"
+                ]
+              ],
+              "status": 200,
+              "status_text": ""
+            }
+          },
+          "base_uri": "https://localhost:8080/",
+          "height": 278
+        },
+        "outputId": "16887e7c-b282-4574-fbe9-a1596c1a2cef"
+      },
+      "source": [
+        "#Load the data\n",
+        "from google.colab import files\n",
+        "uploaded = files.upload()\n",
+        "\n",
+        "df = pd.read_csv('kidney_disease.csv')\n",
+        "#print the first 5 rows\n",
+        "df.head()"
+      ],
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "\n",
+              "     <input type=\"file\" id=\"files-b9517bba-38de-4eaf-b79d-64bd14973876\" name=\"files[]\" multiple disabled\n",
+              "        style=\"border:none\" />\n",
+              "     <output id=\"result-b9517bba-38de-4eaf-b79d-64bd14973876\">\n",
+              "      Upload widget is only available when the cell has been executed in the\n",
+              "      current browser session. Please rerun this cell to enable.\n",
+              "      </output>\n",
+              "      <script src=\"/nbextensions/google.colab/files.js\"></script> "
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        },
+        {
+          "output_type": "stream",
+          "text": [
+            "Saving kidney_disease.csv to kidney_disease.csv\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>age</th>\n",
+              "      <th>bp</th>\n",
+              "      <th>sg</th>\n",
+              "      <th>al</th>\n",
+              "      <th>su</th>\n",
+              "      <th>rbc</th>\n",
+              "      <th>pc</th>\n",
+              "      <th>pcc</th>\n",
+              "      <th>ba</th>\n",
+              "      <th>bgr</th>\n",
+              "      <th>bu</th>\n",
+              "      <th>sc</th>\n",
+              "      <th>sod</th>\n",
+              "      <th>pot</th>\n",
+              "      <th>hemo</th>\n",
+              "      <th>pcv</th>\n",
+              "      <th>wc</th>\n",
+              "      <th>rc</th>\n",
+              "      <th>htn</th>\n",
+              "      <th>dm</th>\n",
+              "      <th>cad</th>\n",
+              "      <th>appet</th>\n",
+              "      <th>pe</th>\n",
+              "      <th>ane</th>\n",
+              "      <th>classification</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>0</td>\n",
+              "      <td>48.0</td>\n",
+              "      <td>80.0</td>\n",
+              "      <td>1.020</td>\n",
+              "      <td>1.0</td>\n",
+              "      <td>0.0</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>121.0</td>\n",
+              "      <td>36.0</td>\n",
+              "      <td>1.2</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>15.4</td>\n",
+              "      <td>44</td>\n",
+              "      <td>7800</td>\n",
+              "      <td>5.2</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>no</td>\n",
+              "      <td>good</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>1</td>\n",
+              "      <td>7.0</td>\n",
+              "      <td>50.0</td>\n",
+              "      <td>1.020</td>\n",
+              "      <td>4.0</td>\n",
+              "      <td>0.0</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>18.0</td>\n",
+              "      <td>0.8</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>11.3</td>\n",
+              "      <td>38</td>\n",
+              "      <td>6000</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>good</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2</td>\n",
+              "      <td>62.0</td>\n",
+              "      <td>80.0</td>\n",
+              "      <td>1.010</td>\n",
+              "      <td>2.0</td>\n",
+              "      <td>3.0</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>423.0</td>\n",
+              "      <td>53.0</td>\n",
+              "      <td>1.8</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>9.6</td>\n",
+              "      <td>31</td>\n",
+              "      <td>7500</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>no</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>no</td>\n",
+              "      <td>poor</td>\n",
+              "      <td>no</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>3</td>\n",
+              "      <td>48.0</td>\n",
+              "      <td>70.0</td>\n",
+              "      <td>1.005</td>\n",
+              "      <td>4.0</td>\n",
+              "      <td>0.0</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>abnormal</td>\n",
+              "      <td>present</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>117.0</td>\n",
+              "      <td>56.0</td>\n",
+              "      <td>3.8</td>\n",
+              "      <td>111.0</td>\n",
+              "      <td>2.5</td>\n",
+              "      <td>11.2</td>\n",
+              "      <td>32</td>\n",
+              "      <td>6700</td>\n",
+              "      <td>3.9</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>poor</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>4</td>\n",
+              "      <td>51.0</td>\n",
+              "      <td>80.0</td>\n",
+              "      <td>1.010</td>\n",
+              "      <td>2.0</td>\n",
+              "      <td>0.0</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>normal</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>notpresent</td>\n",
+              "      <td>106.0</td>\n",
+              "      <td>26.0</td>\n",
+              "      <td>1.4</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>11.6</td>\n",
+              "      <td>35</td>\n",
+              "      <td>7300</td>\n",
+              "      <td>4.6</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>good</td>\n",
+              "      <td>no</td>\n",
+              "      <td>no</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "   id   age    bp     sg   al   su  ...   dm cad appet   pe  ane  classification\n",
+              "0   0  48.0  80.0  1.020  1.0  0.0  ...  yes  no  good   no   no             ckd\n",
+              "1   1   7.0  50.0  1.020  4.0  0.0  ...   no  no  good   no   no             ckd\n",
+              "2   2  62.0  80.0  1.010  2.0  3.0  ...  yes  no  poor   no  yes             ckd\n",
+              "3   3  48.0  70.0  1.005  4.0  0.0  ...   no  no  poor  yes  yes             ckd\n",
+              "4   4  51.0  80.0  1.010  2.0  0.0  ...   no  no  good   no   no             ckd\n",
+              "\n",
+              "[5 rows x 26 columns]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 2
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "9jBAS8tdyTaX",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "55fcee7a-36a6-4a44-845a-bfb90810da75"
+      },
+      "source": [
+        "#get the shape of the data(the number of rows &cols)\n",
+        "df.shape"
+      ],
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "(400, 26)"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 3
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "u22XQiVxyaWS",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#create a list of column names to keep\n",
+        "columns_to_retain = ['sg','al','sc','hemo','pcv','wbcc','rbcc','htn','classification']\n",
+        "\n",
+        "#Drop the columns that are not in columns_to_retain\n",
+        "df = df.drop(  [col for col in df.columns if not col in columns_to_retain] , axis=1  )\n",
+        "\n",
+        "#Drop the rows with na or missing values\n",
+        "df = df.dropna(axis=0)"
+      ],
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "aW8xwI-Xyt0j",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#Transform the non-numeric data in the columns\n",
+        "for column in df.columns:\n",
+        "  if df[column].dtype == np.number:\n",
+        "    continue\n",
+        "    df[column] = LabelEncoder().fit_transform( df[column] )"
+      ],
+      "execution_count": 6,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "oFoD_vwYywhR",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 202
+        },
+        "outputId": "5d53db07-f5cb-4e49-cc71-a8199f27d324"
+      },
+      "source": [
+        "#Print the First 5 rows of the new cleaned data set\n",
+        "df.head()"
+      ],
+      "execution_count": 7,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>sg</th>\n",
+              "      <th>al</th>\n",
+              "      <th>sc</th>\n",
+              "      <th>hemo</th>\n",
+              "      <th>pcv</th>\n",
+              "      <th>htn</th>\n",
+              "      <th>classification</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1.020</td>\n",
+              "      <td>1.0</td>\n",
+              "      <td>1.2</td>\n",
+              "      <td>15.4</td>\n",
+              "      <td>44</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>1.020</td>\n",
+              "      <td>4.0</td>\n",
+              "      <td>0.8</td>\n",
+              "      <td>11.3</td>\n",
+              "      <td>38</td>\n",
+              "      <td>no</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>1.010</td>\n",
+              "      <td>2.0</td>\n",
+              "      <td>1.8</td>\n",
+              "      <td>9.6</td>\n",
+              "      <td>31</td>\n",
+              "      <td>no</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>1.005</td>\n",
+              "      <td>4.0</td>\n",
+              "      <td>3.8</td>\n",
+              "      <td>11.2</td>\n",
+              "      <td>32</td>\n",
+              "      <td>yes</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>1.010</td>\n",
+              "      <td>2.0</td>\n",
+              "      <td>1.4</td>\n",
+              "      <td>11.6</td>\n",
+              "      <td>35</td>\n",
+              "      <td>no</td>\n",
+              "      <td>ckd</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "      sg   al   sc  hemo pcv  htn classification\n",
+              "0  1.020  1.0  1.2  15.4  44  yes            ckd\n",
+              "1  1.020  4.0  0.8  11.3  38   no            ckd\n",
+              "2  1.010  2.0  1.8   9.6  31   no            ckd\n",
+              "3  1.005  4.0  3.8  11.2  32  yes            ckd\n",
+              "4  1.010  2.0  1.4  11.6  35   no            ckd"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 7
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "xvsD9ks8zHwU",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#split the data into independent (x) data set and dependent (y) data set (the target)\n",
+        "X = df.drop(['classification'], axis=1)\n",
+        "Y = df['classification']"
+      ],
+      "execution_count": 8,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "273ja9rhzRQb",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#Feature Scaling\n",
+        "#min-max scaler method scales the data set so that all the input features lie between 0 and 1\n",
+        "x_scaler = MinMaxScaler()\n",
+        "x_scaler.fit(X)\n",
+        "column_names = X.columns\n",
+        "X[column_names] = x_scaler.transform(X)\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "RZkGZwrtzl56",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#split the data into 80% training and 20% testing &shuffle\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=True)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "kA57yEozzx7d",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#Build the model\n",
+        "model = sequential()\n",
+        "model.add( Dense(256, input_dim= len(X.columns) , kernel_intializer= k.intializers.random_normal(seed=13),activation='relu'))\n",
+        "model.add( Dense(1, activation= 'hard_sigmoid'))"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ryWgWlWUzzB6",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#compile the model\n",
+        "model.compile(loss='binary_crossentropy',optimizers='adam',metrics=['accuracy'])"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "bBYdNJuVz4Ie",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#Train the model\n",
+        "history = model.fit(X_train, y_train, epochs = 2000, batch_size= X_train.shape[0])"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "iVkHdsSu2S8M",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#save the model\n",
+        "model.save('ckd.model')"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "l3ZS-Dax2T_V",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#visualize the model loss and accuracy\n",
+        "plt.plot(history.history['acc'])\n",
+        "plt.plot(history.history['loss'])\n",
+        "plt.title('model accuracy and loss')\n",
+        "plt.title('accuracy and loss')\n",
+        "plt.xlabel('epoch')"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "m2M1MD952Zu6",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "print('shape of the training data:', X_train.shape)\n",
+        "print('shape of test data:' X_test.shape)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "hC2dHKVB2fGX",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#shown the actual and predicted values\n",
+        "pred = model.predict(X_test)   \n",
+        "pred =  [1 if y>=0.5 else 0 for y in pred]\n",
+        "\n",
+        "print('original : {0}' .format(\",\".join(str(x) for x in y_test)))\n",
+        "print('predicted : {0}' .format(\",\".join(str(x) for x in x in pred)))"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "JDc2JraA2jx1",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 183
+        },
+        "outputId": "6dacf25a-ec4c-4422-d0f7-0947d703c11b"
+      },
+      "source": [
+        "#show the actual values\n",
+        "y_test"
+      ],
+      "execution_count": 13,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "NameError",
+          "evalue": "ignored",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-13-11ef57026540>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0;31m#show the actual values\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 2\u001b[0;31m \u001b[0my_test\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m: name 'y_test' is not defined"
+          ]
+        }
+      ]
+    }
+  ]
+}
